@@ -27,12 +27,16 @@ group by 2,3,4,5,6;
 
 
 select  count(distinct visitor_id) as visitors
-from sessions s 
+sum(coalesce(amount, 0)) as revenu
+from sessions  
+left join leads  using(visitor_id) 
  where source in ('google', 'organic') ;
 
 
 select  count(distinct visitor_id) as visitors
-from sessions s 
+sum(coalesce(amount, 0)) as revenu
+from sessions  
+left join leads  using(visitor_id) 
 where source in ('vk', 'yandex') ;
 
 
