@@ -10,7 +10,7 @@ WITH last_paid_clicks AS (    select  visitor_id,  visit_date::date AS visit_dat
         ) AS rn
     FROM sessions
    LEFT JOIN leads l using(visitor_id) 
-    WHERE medium IN ('cpc','cpm','cpa','youtube','cpp','tg','social')
+    WHERE medium IN ('cpc','cpm','cpa','youtube','cpp','tg','social') and l.created_at  >= s.visit_date 
 ),
 combined_ads AS (
   select  utm_source,  utm_medium, utm_campaign, SUM(daily_spent) AS total_spent
