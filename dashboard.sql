@@ -67,57 +67,29 @@ from tab1
 group by 1,2,3,4   ;
 
 
-with tab1 as (
-select utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from ya_ads
-group by 1,2,3
-union all
- select utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from vk_ads
-group by 1,2,3
-)
-select to_char(max(visit_date), 'yyyy-mm-dd') as visit_date ,
-s.source , s.medium, s.campaign  ,
-count(distinct s.visitor_id) as visitors_count, 
-t1.total_cost, 
-count (distinct l.lead_id ) as leads_count,
-sum(case  when l.closing_reason = 'успешно реализовано' or l.status_id = 142 then 1 
-  else 0 
-  end )as is_purchase,
-sum (l.amount) as revenue 
-from  sessions s
-left join leads l on l.visitor_id = s.visitor_id
-join tab1 t1 on s.medium=t1.utm_medium and s.source=t1.utm_source and 
-s.campaign=t1.utm_campaign
-group by 2,3,4,6 ;
-
-
-with tab1 as (
-select utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from ya_ads
-group by 1,2,3
-union all
- select utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from vk_ads
-group by 1,2,3
-)
-select 
-count(distinct s.visitor_id) as visitors_count,  
-count (distinct l.lead_id ) as leads_count,
-sum(case  when l.closing_reason = 'успешно реализовано' or l.status_id = 142 then 1 
-  else 0 
-  end )as is_purchase,
-  round(100.00 * count (distinct l.lead_id )  / count(distinct s.visitor_id), 2) as konv_lead,
-  round(100.00 * sum(case  when l.closing_reason = 'успешно реализовано' or l.status_id = 142 then 1 
-  else 0 
-  end ) / count (distinct l.lead_id ), 2) as konv_push,
-  round(100.00 * sum(case  when l.closing_reason = 'успешно реализовано' or l.status_id = 142 then 1 
-  else 0 
-  end ) / count(distinct s.visitor_id), 2) as konv_full
-from  sessions s
-left join leads l on l.visitor_id = s.visitor_id
-join tab1 t1 on s.medium=t1.utm_medium and s.source=t1.utm_source and 
-s.campaign=t1.utm_campaign ;
+with tab1 as(SELECT 
+    s.visitor_id,
+    ROW_NUMBER() OVER (
+            PARTITION BY s.visitor_id 
+            ORDER BY s.visit_date DESC
+        ) AS rn,
+    l.lead_id,
+    CASE 
+            WHEN l.closing_reason = 'Успешно реализовано' OR l.status_id = 142 
+            THEN 1 ELSE 0 
+        END AS purchases
+FROM 
+    sessions s
+LEFT JOIN leads l ON s.visitor_id = l.visitor_id
+     AND l.created_at >= s.visit_date     
+    WHERE medium IN ('cpc','cpm','cpa','youtube','cpp','tg','social')  
+    )
+    SELECT 
+    count(distinct(visitor_id)) as visitor_count,
+    count(distinct(lead_id)) as lead_count,
+    sum(coalesce(purchases)) as purchases_count
+FROM tab1
+where rn = 1;
 
 
 with tab1 as (
@@ -125,7 +97,7 @@ with tab1 as (
         visitor_id,
         min(visit_date) as first_visit_date 
     from sessions
-    where source in ('vk', 'yandex')
+    WHERE medium IN ('cpc','cpm','cpa','youtube','cpp','tg','social')
     group by visitor_id
 ),
 tab2 as (
@@ -170,8 +142,6 @@ group by 1,2,3
 order by  1 desc
 )
  select t2.source  as utm_source, 
- --t2.medium as utm_medium, 
- --t2.campaign as utm_campaign,
  round(sum( coalesce(total_cost, 0)) /  sum(coalesce(visitors, 0)), 2) as cpu,  
   round(sum( coalesce(total_cost, 0)) / sum(coalesce(lead_count, 0)), 2) as  cpl,
 round(sum( coalesce(total_cost, 0)) / sum(coalesce(purchases_count, 0)), 2) cppu ,
