@@ -17,7 +17,7 @@ FROM
     sessions s
 LEFT JOIN 
     leads l USING (visitor_id)
-WHERE   s.medium  IN ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social') 
+WHERE   s.medium  IN ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social') and l.created_at  >= s.visit_date 
     )
     SELECT 
     visitor_id,
