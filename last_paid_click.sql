@@ -10,7 +10,7 @@ with tab1 as(SELECT
     s.campaign AS utm_campaign,
     l.lead_id,
     l.created_at,
-    sum(COALESCE(l.amount, 0)) AS amount,
+    l.amount,
     l.closing_reason,
     l.status_id
 FROM 
@@ -18,7 +18,6 @@ FROM
 LEFT JOIN 
     leads l USING (visitor_id)
 WHERE   s.medium  IN ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social') 
-    group by 1,2,4,5,6,7,8,10,11
     )
     SELECT 
     visitor_id,
