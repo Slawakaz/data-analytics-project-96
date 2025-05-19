@@ -67,29 +67,30 @@ from tab1
 group by 1,2,3,4   ;
 
 
-with tab1 as(SELECT 
+with tab1 as(select 
     s.visitor_id,
-    ROW_NUMBER() OVER (
-            PARTITION BY s.visitor_id 
-            ORDER BY s.visit_date DESC
-        ) AS rn,
+    row_number() over (
+            partition by s.visitor_id 
+            order by s.visit_date desc
+        ) as rn,
     l.lead_id,
-    CASE 
-            WHEN l.closing_reason = 'Успешно реализовано' OR l.status_id = 142 
-            THEN 1 ELSE 0 
-        END AS purchases
-FROM 
+    case 
+            when l.closing_reason = 'успешно реализовано' or l.status_id = 142 
+            then 1 else 0 
+        end as purchases
+from 
     sessions s
-LEFT JOIN leads l ON s.visitor_id = l.visitor_id
-     AND l.created_at >= s.visit_date     
-    WHERE medium IN ('cpc','cpm','cpa','youtube','cpp','tg','social')  
+left join leads l on s.visitor_id = l.visitor_id
+     and l.created_at >= s.visit_date     
+    where medium in ('cpc','cpm','cpa','youtube','cpp','tg','social')  
     )
-    SELECT 
+    select 
     count(distinct(visitor_id)) as visitor_count,
     count(distinct(lead_id)) as lead_count,
     sum(coalesce(purchases)) as purchases_count
-FROM tab1
+from tab1
 where rn = 1;
+
 
 
 with tab1 as (
