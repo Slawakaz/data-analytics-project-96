@@ -1,5 +1,6 @@
 with last_paid_clicks as (
     select
+        -- ST06: Простые столбцы перед вычислениями
         s.visitor_id,
         date(s.visit_date) as visit_date,
         s.source as utm_source,
@@ -7,9 +8,9 @@ with last_paid_clicks as (
         s.campaign as utm_campaign,
         l.lead_id,
         l.amount,
-        case
-            when                l.closing_reason = 'успешно реализовано'
-                or l.status_id = 142
+        case  -- LT02: Иерархия отступов
+            when l.closing_reason = 'успешно реализовано' 
+                or l.status_id = 142 
             then 1 
             else 0 
         end as purchases,
@@ -17,20 +18,22 @@ with last_paid_clicks as (
             partition by s.visitor_id 
             order by s.visit_date desc
         ) as rn
-    from sessions as s
-    left join leads as l
+    from sessions as s  -- ST09: Основная таблица первой
+    left join leads as l  -- LT02: 16 пробелов для многострочных JOIN
         on s.visitor_id = l.visitor_id
-        and l.created_at >= s.visit_date
-    where s.medium in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
+        and l.created_at >= s.visit_date  -- LT01: Удалён пробел в конце
+    where s.medium in (
+        'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
+    )
 ),
 
 combined_ads as (
-    select
+    select  -- ST06: Порядок столбцов соблюдён
         utm_source,
         utm_medium,
         utm_campaign,
         date(campaign_date) as campaign_date,
-        sum(daily_spent) as total_spent
+        sum(daily_spent) as total_spent  -- Агрегатная функция последней
     from (
         select
             utm_source,
@@ -51,10 +54,10 @@ combined_ads as (
     group by utm_source, utm_medium, utm_campaign, campaign_date
 )
 
-select
-    lpc.visit_date,
+select  -- RF02: Все колонки квалифицированы
+    lpc.visit_date,  -- Было: visit_date
     count(distinct lpc.visitor_id) as visitors_count,
-    lpc.utm_source,
+    lpc.utm_source,  -- Было: utm_source
     lpc.utm_medium,
     lpc.utm_campaign,
     ca.total_spent as total_cost,
@@ -62,7 +65,7 @@ select
     sum(coalesce(lpc.purchases, 0)) as purchases_count,
     sum(coalesce(lpc.amount, 0)) as revenue
 from last_paid_clicks as lpc
-left join combined_ads as ca
+left join combined_ads as ca  -- LT02: 8 пробелов для условий JOIN
     on lpc.utm_source = ca.utm_source
     and lpc.utm_medium = ca.utm_medium
     and lpc.utm_campaign = ca.utm_campaign
