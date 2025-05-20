@@ -148,9 +148,9 @@ conversion_data AS (
 )
 SELECT
     cd.source AS utm_source,
-    ROUND(COALESCE(ac.total_cost / NULLIF(cd.visitors, 0), 2)) AS cpu,
-    ROUND(COALESCE(ac.total_cost / NULLIF(cd.leads, 0), 2)) AS cpl,
-    ROUND(COALESCE(ac.total_cost / NULLIF(cd.purchases, 0), 2)) AS cppu,
+    ROUND(COALESCE(ac.total_cost / NULLIF(cd.visitors, 0), 0), 2) AS cpu,
+    ROUND(COALESCE(ac.total_cost / NULLIF(cd.leads, 0), 0), 2) AS cpl,
+    ROUND(COALESCE(ac.total_cost / NULLIF(cd.purchases, 0), 0), 2) AS cppu,
     ROUND(COALESCE(
         (cd.revenue - ac.total_cost) / NULLIF(ac.total_cost, 0) * 100, 
         0
