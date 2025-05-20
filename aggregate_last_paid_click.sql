@@ -8,8 +8,8 @@ with last_paid_clicks as (
         l.lead_id,
         l.amount,
         case
-            when l.closing_reason = 'успешно реализовано' 
-                or l.status_id = 142 
+            when                l.closing_reason = 'успешно реализовано'
+                or l.status_id = 142
             then 1 
             else 0 
         end as purchases,
