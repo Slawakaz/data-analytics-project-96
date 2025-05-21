@@ -10,7 +10,7 @@ with tab1 as (
         l.amount,
         l.closing_reason,
         l.status_id,
-    row_number() over (
+        row_number() over (
             partition by s.visitor_id
             order by s.visit_date desc
         ) as rn
