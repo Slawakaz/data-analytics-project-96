@@ -11,7 +11,7 @@ SELECT
     medium,
     campaign,
     visit_date::DATE AS visit_date,
-   CASE
+    CASE
         WHEN EXTRACT(ISODOW FROM visit_date) = 1 THEN '1monday'
         WHEN EXTRACT(ISODOW FROM visit_date) = 2 THEN '2tuesday'
         WHEN EXTRACT(ISODOW FROM visit_date) = 3 THEN '3wednesday'
