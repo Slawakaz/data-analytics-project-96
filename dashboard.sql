@@ -36,3 +36,30 @@ GROUP BY
         WHEN EXTRACT(ISODOW FROM visit_date) = 6 THEN '6saturday'
         WHEN EXTRACT(ISODOW FROM visit_date) = 7 THEN '7sunday'
     END;
+with tab1 as (
+    select 
+        campaign_date,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        daily_spent
+    from vk_ads
+    union all
+    select 
+        campaign_date,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        daily_spent
+    from ya_ads
+)
+select 
+    to_char(campaign_date, 'yyyy-mm-dd') as visit_date,
+    utm_source as source,
+    utm_medium as medium,
+    utm_campaign as campaign,
+    sum(daily_spent) as total_spent
+from tab1 
+group by 1,2,3,4   
+;
+
