@@ -99,38 +99,63 @@ SELECT
     ) AS percentile_90_days
 FROM tab2;
 with tab1 as (
-select  utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from ya_ads
-group by 1,2,3
-union all
- select  utm_source,  utm_medium, utm_campaign, sum(daily_spent) as total_cost
-from vk_ads
-group by 1,2,3
-order by 1 
+  select 
+    utm_source, 
+    utm_medium, 
+    utm_campaign, 
+    sum(daily_spent) as total_cost
+  from ya_ads
+  group by 1, 2, 3
+  union all
+  select 
+    utm_source, 
+    utm_medium, 
+    utm_campaign, 
+    sum(daily_spent) as total_cost
+  from vk_ads
+  group by 1, 2, 3
 ),
-tab2 as(
-select 
-s.source , s.medium, s.campaign  ,
-count(distinct s.visitor_id) as visitors, 
-sum(case  when l.closing_reason = 'успешно реализовано' or l.status_id = 142 then 1 
-  else 0 
-  end ) as purchases_count, 
-  count(distinct l.lead_id) as lead_count,
-  sum(l.amount) as revenue
-from  sessions s
-left join leads l on l.visitor_id = s.visitor_id
-where s.source in ('vk', 'yandex')
-group by 1,2,3
-order by  1 desc
+tab2 as (
+  select 
+    s.source, 
+    s.medium, 
+    s.campaign,
+    count(distinct s.visitor_id) as visitors,
+    sum(case 
+      when l.closing_reason = 'успешно реализовано' or l.status_id = 142 
+      then 1 else 0 
+    end) as purchases_count,
+    count(distinct l.lead_id) as lead_count,
+    sum(l.amount) as revenue
+  from sessions s
+  left join leads l on l.visitor_id = s.visitor_id
+  where s.source in ('vk', 'yandex')
+  group by 1, 2, 3
 )
- select t2.source  as utm_source, 
- t2.medium as utm_medium, 
- t2.campaign as utm_campaign,
- round(sum( coalesce(total_cost, 0)) /  sum(coalesce(visitors, 0)), 2) as cpu,  
-  round(sum( coalesce(total_cost, 0)) / sum(coalesce(lead_count, 0)), 2) as  cpl,
-round(sum( coalesce(total_cost, 0)) / sum(coalesce(purchases_count, 0)), 2) cppu ,
- round((sum(coalesce(revenue, 0)) - sum( coalesce(total_cost, 0))) / sum( coalesce(total_cost, 0)) * 100.00, 2) as roi
+select 
+  t2.source as utm_source,
+  t2.medium as utm_medium,
+  t2.campaign as utm_campaign,
+  coalesce(round(
+    sum(coalesce(t1.total_cost, 0)) / nullif(sum(coalesce(t2.visitors, 0)), 0), 
+    2
+  ), 0) as cpu,
+  coalesce(round(
+    sum(coalesce(t1.total_cost, 0)) / nullif(sum(coalesce(t2.lead_count, 0)), 0), 
+    2
+  ), 0) as cpl,
+  coalesce(round(
+    sum(coalesce(t1.total_cost, 0)) / nullif(sum(coalesce(t2.purchases_count, 0)), 0), 
+    2
+  ), 0) as cppu,
+  coalesce(round(
+    (sum(coalesce(t2.revenue, 0)) - sum(coalesce(t1.total_cost, 0))) 
+    / nullif(sum(coalesce(t1.total_cost, 0)), 0) * 100, 
+    2
+  ), 0) as roi
 from tab2 t2
-left join tab1 t1 on t2.medium=t1.utm_medium and t2.source=t1.utm_source and 
-t2.campaign=t1.utm_campaign
-group by 1;
+left join tab1 t1 
+  on t2.medium = t1.utm_medium 
+  and t2.source = t1.utm_source 
+  and t2.campaign = t1.utm_campaign
+group by 1, 2, 3;
