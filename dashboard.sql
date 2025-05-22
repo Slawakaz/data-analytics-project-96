@@ -11,7 +11,7 @@ SELECT
     medium,
     campaign,
     visit_date::DATE AS visit_date,
-    TO_CHAR(visit_date, 'IDDay'),
+    TO_CHAR(visit_date, 'IDDay') AS day_of_week,
     COUNT(DISTINCT visitor_id) AS visitor_count
 FROM sessions
 GROUP BY
