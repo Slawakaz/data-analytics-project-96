@@ -66,26 +66,35 @@ GROUP BY
     utm_medium,
     utm_campaign,
     TO_CHAR(campaign_date, 'yyyy-mm-dd');
-with tab1 as (
-    select 
+WITH
+tab1 AS (
+    SELECT
         visitor_id,
-        min(visit_date) as first_visit_date 
-    from sessions
-    where source in ('vk', 'yandex')
-    group by visitor_id
+        MIN(visit_date) AS first_visit_date
+    FROM sessions
+    WHERE source IN ('vk', 'yandex')
+    GROUP BY visitor_id
 ),
-tab2 as (
-    select 
-        l.visitor_id,
-        l.created_at as lead_closed_date,
-        t1.first_visit_date,
-        (l.created_at- t1.first_visit_date) as days_to_close
-    from leads l
-    join tab1 t1 using(visitor_id)
-    where l.closing_reason is not null  and l.created_at >= t1.first_visit_date
-    order by 4
-)
-select 
-    extract(day from percentile_cont(0.9) within group (order by days_to_close)) as percentile_90_days
-from tab2;
 
+tab2 AS (
+    SELECT
+        l.visitor_id,
+        l.created_at AS lead_closed_date,
+        t1.first_visit_date,
+        (l.created_at - t1.first_visit_date) AS days_to_close
+    FROM leads AS l
+    INNER JOIN tab1 AS t1
+        ON l.visitor_id = t1.visitor_id
+    WHERE
+        l.closing_reason IS NOT NULL
+        AND l.created_at >= t1.first_visit_date
+    ORDER BY days_to_close
+)
+
+SELECT
+    EXTRACT(
+        DAY FROM PERCENTILE_CONT(0.9) WITHIN GROUP (
+            ORDER BY days_to_close
+        )
+    ) AS percentile_90_days
+FROM tab2;
