@@ -14,7 +14,7 @@ SELECT
     TO_CHAR(visit_date, 'IDay') AS day_of_week,
     COUNT(DISTINCT visitor_id) AS visitor_count
 FROM sessions
-GROUP BY    
+GROUP BY
     source,
     medium,
     campaign,
