@@ -18,6 +18,5 @@ GROUP BY
     source,
     medium,
     campaign,
-    visit_date::DATE
-AS visit_date,
-    TO_CHAR(visit_date, 'IDay') AS day_of_week;
+    visit_date::DATE,
+    TO_CHAR(visit_date, 'IDay');
