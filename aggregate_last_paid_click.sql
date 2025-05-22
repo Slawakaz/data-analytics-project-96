@@ -8,7 +8,8 @@ with last_paid_clicks as (
         l.amount,
         date(s.visit_date) as visit_date,
         case
-            when l.closing_reason = 'успешно реализовано'
+            when 
+                l.closing_reason = 'успешно реализовано'
                 or l.status_id = 142
                     then 1
             else 0
@@ -19,7 +20,8 @@ with last_paid_clicks as (
         ) as rn
     from sessions as s
     left join leads as l
-        on s.visitor_id = l.visitor_id
+        on 
+            s.visitor_id = l.visitor_id
             and s.visit_date <= l.created_at
     where s.medium in (
         'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
