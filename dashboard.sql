@@ -53,6 +53,7 @@ WITH tab1 AS (
         daily_spent
     FROM ya_ads
 )
+
 SELECT
     utm_source AS source,
     utm_medium AS medium,
