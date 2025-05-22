@@ -117,7 +117,6 @@ WITH tab1 AS (
     FROM vk_ads
     GROUP BY utm_source, utm_medium, utm_campaign
 ),
-
 tab2 AS (
     SELECT
         s.source,
