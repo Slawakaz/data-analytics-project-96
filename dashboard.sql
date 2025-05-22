@@ -1,11 +1,22 @@
 SELECT
     visit_date::DATE AS visit_date,
+    COUNT(DISTINCT visitor_id) AS visitor_count
+FROM sessions
+GROUP BY visit_date::DATE;
+SELECT
+    visit_date::DATE AS visit_date,
     source,
     medium,
     campaign,
     COUNT(DISTINCT visitor_id) AS visitor_count
 FROM sessions
 GROUP BY visit_date::DATE, source, medium, campaign;
+SELECT
+    TO_CHAR(visit_date, 'IDDay') AS day_of_week,
+    COUNT(DISTINCT visitor_id) AS visitor_count
+FROM sessions
+GROUP BY
+    TO_CHAR(visit_date, 'IDDay');
 SELECT
     source,
     medium,
@@ -20,6 +31,24 @@ GROUP BY
     campaign,
     visit_date::DATE,
     TO_CHAR(visit_date, 'IDDay');
+WITH tab1 AS (
+    SELECT
+        campaign_date,
+        daily_spent
+    FROM vk_ads
+    UNION ALL
+    SELECT
+        campaign_date,
+        daily_spent
+    FROM ya_ads
+)
+
+SELECT
+    TO_CHAR(campaign_date, 'yyyy-mm-dd') AS visit_date,
+    SUM(daily_spent) AS total_spent
+FROM tab1
+GROUP BY
+    TO_CHAR(campaign_date, 'yyyy-mm-dd');
 WITH tab1 AS (
     SELECT
         campaign_date,
@@ -128,6 +157,95 @@ tab2 AS (
 
 SELECT
     t2.source AS utm_source,
+    COALESCE(
+        ROUND(
+            SUM(COALESCE(t1.total_cost, 0))
+            / NULLIF(SUM(COALESCE(t2.visitors, 0)), 0),
+            2
+        ),
+        0
+    ) AS cpu,
+    COALESCE(
+        ROUND(
+            SUM(COALESCE(t1.total_cost, 0))
+            / NULLIF(SUM(COALESCE(t2.lead_count, 0)), 0),
+            2
+        ),
+        0
+    ) AS cpl,
+    COALESCE(
+        ROUND(
+            SUM(COALESCE(t1.total_cost, 0))
+            / NULLIF(SUM(COALESCE(t2.purchases_count, 0)), 0),
+            2
+        ),
+        0
+    ) AS cppu,
+    COALESCE(
+        ROUND(
+            (
+                SUM(COALESCE(t2.revenue, 0))
+                - SUM(COALESCE(t1.total_cost, 0))
+            )
+            / NULLIF(SUM(COALESCE(t1.total_cost, 0)), 0)
+            * 100,
+            2
+        ),
+        0
+    ) AS roi
+FROM tab2 AS t2
+LEFT JOIN tab1 AS t1
+    ON
+        t2.medium = t1.utm_medium
+        AND t2.source = t1.utm_source
+        AND t2.campaign = t1.utm_campaign
+GROUP BY t2.source;
+WITH tab1 AS (
+    SELECT
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        SUM(daily_spent) AS total_cost
+    FROM ya_ads
+    GROUP BY utm_source, utm_medium, utm_campaign
+
+    UNION ALL
+
+    SELECT
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        SUM(daily_spent) AS total_cost
+    FROM vk_ads
+    GROUP BY utm_source, utm_medium, utm_campaign
+),
+
+tab2 AS (
+    SELECT
+        s.source,
+        s.medium,
+        s.campaign,
+        COUNT(DISTINCT s.visitor_id) AS visitors,
+        SUM(
+            CASE
+                WHEN
+                    l.closing_reason = 'Успешно реализовано'
+                    OR l.status_id = 142
+                    THEN 1
+                ELSE 0
+            END
+        ) AS purchases_count,
+        COUNT(DISTINCT l.lead_id) AS lead_count,
+        SUM(l.amount) AS revenue
+    FROM sessions AS s
+    LEFT JOIN leads AS l
+        ON s.visitor_id = l.visitor_id
+    WHERE s.source IN ('vk', 'yandex')
+    GROUP BY s.source, s.medium, s.campaign
+)
+
+SELECT
+    t2.source AS utm_source,
     t2.medium AS utm_medium,
     t2.campaign AS utm_campaign,
     COALESCE(
@@ -172,7 +290,7 @@ LEFT JOIN tab1 AS t1
         t2.medium = t1.utm_medium
         AND t2.source = t1.utm_source
         AND t2.campaign = t1.utm_campaign
-GROUP BY utm_source, utm_medium, utm_campaign;
+GROUP BY t2.source, t2.medium, t2.campaign;
 WITH tab1 AS (
     SELECT
         utm_source,
