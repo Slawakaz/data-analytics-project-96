@@ -189,3 +189,81 @@ LEFT JOIN tab1 AS t1
         AND t2.source = t1.utm_source
         AND t2.campaign = t1.utm_campaign
 GROUP BY utm_source, utm_medium, utm_campaign;
+with tab1 as (
+    select
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        sum(daily_spent) as total_cost
+    from ya_ads
+    group by 1, 2, 3
+    union all
+    select
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        sum(daily_spent) as total_cost
+    from vk_ads
+    group by 1, 2, 3
+    order by 1
+),
+
+tab2 as (
+    select
+        s.source,
+        s.medium,
+        s.campaign,
+        to_char(visit_date, 'yyyy-mm-dd') as visit_date,
+        count(distinct s.visitor_id) as visitors,
+        sum(case
+            when
+                l.closing_reason = 'успешно реализовано' or l.status_id = 142
+                then 1
+            else 0
+        end) as purchases_count,
+        count(distinct l.lead_id) as lead_count,
+        sum(l.amount) as revenue
+    from sessions as s
+    left join leads as l on s.visitor_id = l.visitor_id
+    where s.source in ('vk', 'yandex')
+    group by 1, 2, 3, 4
+    order by 1 desc
+)
+
+select
+    t2.visit_date,
+    t2.source as utm_source,
+    t2.medium as utm_medium,
+    t2.campaign as utm_campaign,
+    visitors,
+    lead_count,
+    purchases_count,
+    coalesce(revenue, 0) as revenue,
+    coalesce(total_cost, 0) as total_cost,
+    coalesce(
+        round(sum(coalesce(total_cost, 0)) / sum(nullif(visitors, 0)), 2), 0
+    ) as cpu,
+    coalesce(
+        round(sum(coalesce(total_cost, 0)) / sum(nullif(lead_count, 0)), 2), 0
+    ) as cpl,
+    coalesce(
+        round(
+            sum(coalesce(total_cost, 0)) / sum(nullif(purchases_count, 0)), 2
+        ),
+        0
+    ) as cppu,
+    coalesce(
+        round(
+            (sum(coalesce(revenue, 0)) - sum(nullif(total_cost, 0)))
+            / sum(nullif(total_cost, 0))
+            * 100.00,
+            2
+        ),
+        0
+    ) as roi
+from tab2 as t2
+left join tab1 as t1
+    on
+        t2.medium = t1.utm_medium and t2.source = t1.utm_source
+        and t2.campaign = t1.utm_campaign
+group by 1, 2, 3, 4, 5, 6, 7, 8, 9;
