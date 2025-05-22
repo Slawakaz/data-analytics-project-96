@@ -189,81 +189,93 @@ LEFT JOIN tab1 AS t1
         AND t2.source = t1.utm_source
         AND t2.campaign = t1.utm_campaign
 GROUP BY utm_source, utm_medium, utm_campaign;
-with tab1 as (
-    select
+WITH tab1 AS (
+    SELECT
         utm_source,
         utm_medium,
         utm_campaign,
-        sum(daily_spent) as total_cost
-    from ya_ads
-    group by 1, 2, 3
-    union all
-    select
+        SUM(daily_spent) AS total_cost
+    FROM ya_ads
+    GROUP BY utm_source, utm_medium, utm_campaign
+    
+    UNION ALL
+    
+    SELECT
         utm_source,
         utm_medium,
         utm_campaign,
-        sum(daily_spent) as total_cost
-    from vk_ads
-    group by 1, 2, 3
-    order by 1
+        SUM(daily_spent) AS total_cost
+    FROM vk_ads
+    GROUP BY utm_source, utm_medium, utm_campaign
 ),
 
-tab2 as (
-    select
+tab2 AS (
+    SELECT
         s.source,
         s.medium,
         s.campaign,
-        to_char(visit_date, 'yyyy-mm-dd') as visit_date,
-        count(distinct s.visitor_id) as visitors,
-        sum(case
-            when
-                l.closing_reason = 'успешно реализовано' or l.status_id = 142
-                then 1
-            else 0
-        end) as purchases_count,
-        count(distinct l.lead_id) as lead_count,
-        sum(l.amount) as revenue
-    from sessions as s
-    left join leads as l on s.visitor_id = l.visitor_id
-    where s.source in ('vk', 'yandex')
-    group by 1, 2, 3, 4
-    order by 1 desc
+        TO_CHAR(s.visit_date, 'YYYY-MM-DD') AS visit_date,
+        COUNT(DISTINCT s.visitor_id) AS visitors,
+        SUM(
+            CASE
+                WHEN l.closing_reason = 'успешно реализовано' OR l.status_id = 142
+                THEN 1
+                ELSE 0
+            END
+        ) AS purchases_count,
+        COUNT(DISTINCT l.lead_id) AS lead_count,
+        SUM(l.amount) AS revenue
+    FROM sessions AS s
+    LEFT JOIN leads AS l
+        ON s.visitor_id = l.visitor_id
+    WHERE s.source IN ('vk', 'yandex')
+    GROUP BY s.source, s.medium, s.campaign, s.visit_date
 )
 
-select
+SELECT
     t2.visit_date,
-    t2.source as utm_source,
-    t2.medium as utm_medium,
-    t2.campaign as utm_campaign,
-    visitors,
-    lead_count,
-    purchases_count,
-    coalesce(revenue, 0) as revenue,
-    coalesce(total_cost, 0) as total_cost,
-    coalesce(
-        round(sum(coalesce(total_cost, 0)) / sum(nullif(visitors, 0)), 2), 0
-    ) as cpu,
-    coalesce(
-        round(sum(coalesce(total_cost, 0)) / sum(nullif(lead_count, 0)), 2), 0
-    ) as cpl,
-    coalesce(
-        round(
-            sum(coalesce(total_cost, 0)) / sum(nullif(purchases_count, 0)), 2
-        ),
+    t2.source AS utm_source,
+    t2.medium AS utm_medium,
+    t2.campaign AS utm_campaign,
+    t2.visitors,
+    t2.lead_count,
+    t2.purchases_count,
+    COALESCE(t2.revenue, 0) AS revenue,
+    COALESCE(t1.total_cost, 0) AS total_cost,
+    COALESCE(
+        ROUND(SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.visitors), 0), 2),
         0
-    ) as cppu,
-    coalesce(
-        round(
-            (sum(coalesce(revenue, 0)) - sum(nullif(total_cost, 0)))
-            / sum(nullif(total_cost, 0))
+    ) AS cpu,
+    COALESCE(
+        ROUND(SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.lead_count), 0), 2),
+        0
+    ) AS cpl,
+    COALESCE(
+        ROUND(SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.purchases_count), 0), 2),
+        0
+    ) AS cppu,
+    COALESCE(
+        ROUND(
+            (SUM(COALESCE(t2.revenue, 0)) - SUM(COALESCE(t1.total_cost, 0)))
+            / NULLIF(SUM(COALESCE(t1.total_cost, 0)), 0)
             * 100.00,
             2
         ),
         0
-    ) as roi
-from tab2 as t2
-left join tab1 as t1
-    on
-        t2.medium = t1.utm_medium and t2.source = t1.utm_source
-        and t2.campaign = t1.utm_campaign
-group by 1, 2, 3, 4, 5, 6, 7, 8, 9;
+    ) AS roi
+FROM tab2 AS t2
+LEFT JOIN tab1 AS t1
+    ON t2.medium = t1.utm_medium
+    AND t2.source = t1.utm_source
+    AND t2.campaign = t1.utm_campaign
+GROUP BY
+    t2.visit_date,
+    t2.source,
+    t2.medium,
+    t2.campaign,
+    t2.visitors,
+    t2.lead_count,
+    t2.purchases_count,
+    t2.revenue,
+    t1.total_cost
+ORDER BY t2.source DESC;
