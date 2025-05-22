@@ -197,9 +197,9 @@ WITH tab1 AS (
         SUM(daily_spent) AS total_cost
     FROM ya_ads
     GROUP BY utm_source, utm_medium, utm_campaign
-    
+
     UNION ALL
-    
+
     SELECT
         utm_source,
         utm_medium,
@@ -218,8 +218,10 @@ tab2 AS (
         COUNT(DISTINCT s.visitor_id) AS visitors,
         SUM(
             CASE
-                WHEN l.closing_reason = 'успешно реализовано' OR l.status_id = 142
-                THEN 1
+                WHEN
+                    l.closing_reason = 'успешно реализовано'
+                    OR l.status_id = 142
+                    THEN 1
                 ELSE 0
             END
         ) AS purchases_count,
@@ -247,11 +249,17 @@ SELECT
         0
     ) AS cpu,
     COALESCE(
-        ROUND(SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.lead_count), 0), 2),
+        ROUND(
+            SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.lead_count), 0), 2
+        ),
         0
     ) AS cpl,
     COALESCE(
-        ROUND(SUM(COALESCE(t1.total_cost, 0)) / NULLIF(SUM(t2.purchases_count), 0), 2),
+        ROUND(
+            SUM(COALESCE(t1.total_cost, 0))
+            / NULLIF(SUM(t2.purchases_count), 0),
+            2
+        ),
         0
     ) AS cppu,
     COALESCE(
@@ -265,9 +273,10 @@ SELECT
     ) AS roi
 FROM tab2 AS t2
 LEFT JOIN tab1 AS t1
-    ON t2.medium = t1.utm_medium
-    AND t2.source = t1.utm_source
-    AND t2.campaign = t1.utm_campaign
+    ON
+        t2.medium = t1.utm_medium
+        AND t2.source = t1.utm_source
+        AND t2.campaign = t1.utm_campaign
 GROUP BY
     t2.visit_date,
     t2.source,
